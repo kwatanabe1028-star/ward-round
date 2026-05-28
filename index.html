@@ -584,6 +584,28 @@
         </p>
       </div>
 
+      <div id="pending-banner" class="hidden" style="
+        background: color-mix(in srgb, var(--warn) 10%, var(--white));
+        border: 1.5px solid color-mix(in srgb, var(--warn) 45%, var(--white));
+        border-left: 4px solid var(--warn);
+        border-radius: 8px; padding: 12px 14px; margin-bottom: 14px;
+      ">
+        <p style="font-size:13px;font-weight:700;color:var(--warn);margin-bottom:6px">⚠️ 未送信のデータがあります</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">前回の送信が完了していません。</p>
+        <div style="display:flex;gap:8px">
+          <button onclick="retryPending()" style="
+            flex:1; padding:9px; border-radius:7px; border:none;
+            background:var(--warn); color:var(--white);
+            font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;
+          ">↻ 再送信する</button>
+          <button onclick="clearPending()" style="
+            flex:1; padding:9px; border-radius:7px;
+            border:1.5px solid color-mix(in srgb, var(--warn) 40%, var(--white));
+            background:var(--white); color:var(--warn);
+            font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;
+          ">破棄する</button>
+        </div>
+      </div>
       <button class="btn btn-primary" id="btn-start" onclick="goTime()">記録を始める →</button>
       <button class="btn btn-danger"  onclick="submitNoRound()">本日 開催なし で記録</button>
     </div>
@@ -675,6 +697,15 @@
         </div>
       </div>
 
+      <div id="retry-block" class="hidden" style="
+        background: color-mix(in srgb, var(--warn) 8%, var(--white));
+        border: 1.5px solid color-mix(in srgb, var(--warn) 40%, var(--white));
+        border-radius: 10px; padding: 14px 16px; margin-bottom: 10px;
+      ">
+        <p style="font-size:13px;font-weight:700;color:var(--warn);margin-bottom:8px">送信に失敗しました</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">通信状態を確認してから再試行してください。入力内容は保持されています。</p>
+        <button class="btn btn-outline" onclick="retrySend()" style="margin-bottom:0">↻ 再送信する</button>
+      </div>
       <button class="btn btn-primary" onclick="submitRecord()">送信する ✓</button>
     </div>
   </div>
@@ -777,6 +808,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('inp-gasurl').value = ls('gasUrl') || '';
   applyTestMode(ls('testMode') === 'true');
+  // 未送信データがあれば警告バナーを表示
+  if (ls('pendingPayload')) {
+    document.getElementById('pending-banner').classList.remove('hidden');
+  }
   // GAS URLが設定済みならメンバーをバックグラウンドで同期
   const url = ls('gasUrl');
   if (url) syncMembersFromGas(url, false);
@@ -1231,6 +1266,8 @@ function buildRecordPayload() {
 
 /* ─────────────── SUBMIT ─────────────── */
 let _sending = false;
+let _pendingPayload = null;
+let _pendingMsg     = '';
 
 async function submitNoRound() {
   const payload = buildNoRoundPayload();
@@ -1250,6 +1287,40 @@ async function send(payload, successMsg) {
   if (isTestMode()) { showTestModal(payload); return; }
   const url = ls('gasUrl');
   if (!url) { toast('設定でGAS URLを入力してください'); return; }
+  // 送信前にlocalStorageへバックアップ
+  _pendingPayload = payload;
+  _pendingMsg     = successMsg;
+  lss('pendingPayload', JSON.stringify({ payload, successMsg }));
+  document.getElementById('retry-block').classList.add('hidden');
+  await doSend(payload, successMsg);
+}
+
+async function retrySend() {
+  if (!_pendingPayload) return;
+  await doSend(_pendingPayload, _pendingMsg);
+}
+
+async function retryPending() {
+  const saved = ls('pendingPayload');
+  if (!saved) return;
+  const { payload, successMsg } = JSON.parse(saved);
+  _pendingPayload = payload;
+  _pendingMsg     = successMsg;
+  document.getElementById('pending-banner').classList.add('hidden');
+  const url = ls('gasUrl');
+  if (!url) { toast('設定でGAS URLを入力してください'); return; }
+  await doSend(payload, successMsg);
+}
+
+function clearPending() {
+  localStorage.removeItem('pendingPayload');
+  _pendingPayload = null;
+  document.getElementById('pending-banner').classList.add('hidden');
+  toast('未送信データを破棄しました');
+}
+
+async function doSend(payload, successMsg) {
+  const url = ls('gasUrl');
   _sending = true;
   try {
     toast('送信中…');
@@ -1259,15 +1330,19 @@ async function send(payload, successMsg) {
     });
     const json = await res.json();
     if (json.status === 'ok') {
+      localStorage.removeItem('pendingPayload');
+      _pendingPayload = null;
       toast(successMsg);
       setTimeout(() => { _sending = false; goScreen('screen-home'); }, 1600);
     } else {
       toast('エラー: ' + (json.message || '不明'));
       _sending = false;
+      document.getElementById('retry-block').classList.remove('hidden');
     }
   } catch (e) {
-    toast('送信失敗: ' + e.message);
+    toast('送信失敗: 通信エラー');
     _sending = false;
+    document.getElementById('retry-block').classList.remove('hidden');
   }
 }
 
