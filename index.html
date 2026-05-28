@@ -74,8 +74,9 @@
     /* ── Test banner ── */
     .test-banner {
       background: var(--warn); color: var(--white);
-      text-align: center; padding: 6px 12px;
-      font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+      text-align: center; padding: 8px 12px;
+      font-size: 13px; font-weight: 700; letter-spacing: 0.06em;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
     }
 
     /* ── App header ── */
@@ -539,7 +540,7 @@
 <div class="app">
   <div class="toast" id="toast"></div>
 
-  <!-- テストモードバナー -->
+  <!-- テストモードバナー（最上部） -->
   <div id="test-banner" class="test-banner hidden">
     🧪 TEST MODE — データは送信されません
   </div>
@@ -634,6 +635,24 @@
           ">破棄する</button>
         </div>
       </div>
+      <div id="testmode-warning" class="hidden" style="
+        background: color-mix(in srgb, var(--warn) 12%, var(--white));
+        border: 2px solid var(--warn);
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+      ">
+        <p style="font-size:14px;font-weight:800;color:var(--warn);margin-bottom:4px">🧪 テストモードが ON です</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">
+          このまま送信してもデータは記録されません。<br>実際に記録する場合は OFF にしてください。
+        </p>
+        <button onclick="setTestMode(false)" style="
+          width:100%; padding:10px; border-radius:8px; border:none;
+          background:var(--warn); color:var(--white);
+          font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;
+        ">テストモードを OFF にする</button>
+      </div>
+
       <p style="font-size:12px;color:var(--subtle);text-align:center;margin-bottom:8px">
         開催の条件：<strong style="color:var(--dark)">参加メンバー 3 名以上</strong>
       </p>
@@ -988,6 +1007,7 @@ function setTestMode(on) {
 }
 function applyTestMode(on) {
   document.getElementById('test-banner').classList.toggle('hidden', !on);
+  document.getElementById('testmode-warning').classList.toggle('hidden', !on);
   document.getElementById('tm-on').classList.toggle('active', on);
   document.getElementById('tm-off').classList.toggle('active', !on);
 }
