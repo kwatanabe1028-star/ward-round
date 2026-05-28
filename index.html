@@ -1334,7 +1334,7 @@ function buildRecordPayload() {
     concurrent: concurrentVal(),
     held: true,
     startTime: S.startTime || '', endTime: document.getElementById('inp-end').value || '',
-    participantCount: memberData.filter(m => m.status === '参加').length,
+    participantCount: memberData.filter(m => m.status === '参加' || m.status === '途中退席').length,
     partialCount:     memberData.filter(m => m.status === '途中退席').length,
     absentCount:      memberData.filter(m => m.status === '不参加').length,
     members: memberData,

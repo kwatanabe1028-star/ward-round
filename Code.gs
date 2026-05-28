@@ -169,6 +169,8 @@ function flattenAll() {
     const hcuDoc     = row[5];   // F HCU専属医師
     const concurrent = row[6];   // G 兼任フラグ
     const held       = row[7];   // H 開催フラグ
+    const startTime  = row[8];   // I 開始時刻
+    const endTime    = row[9];   // J 終了時刻
     const valid      = row[14];  // O 記録信頼性
     const jsonStr    = row[13];  // N 参加者詳細JSON
 
@@ -212,15 +214,17 @@ function flattenAll() {
         erDoc,                         // E 救急外来専属医師
         hcuDoc,                        // F HCU専属医師
         concurrent,                    // G 兼任フラグ
-        name,                          // H 名前
-        role,                          // I 職種
-        status,                        // J ステータス
-        category,                      // K 参加区分
-        deps.length,                   // L 退席回数
-        absReason,                     // M 不参加理由
-        m.absenceReturnTime || '',     // N 不参加後復帰時刻
-        valid,                         // O 記録信頼性
-        sentAt,                        // P 送信日時
+        startTime,                     // H 開始時刻
+        endTime,                       // I 終了時刻
+        name,                          // J 名前
+        role,                          // K 職種
+        status,                        // L ステータス
+        category,                      // M 参加区分
+        deps.length,                   // N 退席回数
+        absReason,                     // O 不参加理由
+        m.absenceReturnTime || '',     // P 不参加後復帰時刻
+        valid,                         // Q 記録信頼性
+        sentAt,                        // R 送信日時
       ]);
 
       // 退席詳細シートへの行（途中退席・不参加どちらも対象）
@@ -253,6 +257,7 @@ function flattenAll() {
   writeSheet(ss, 'メンバー集計', [
     '日付','介入フラグ','チーム','ラウンド種別',
     '救急外来専属医師','HCU専属医師','兼任フラグ',
+    '開始時刻','終了時刻',
     '名前','職種','ステータス','参加区分',
     '退席回数','不参加理由','不参加後復帰時刻',
     '記録信頼性','送信日時',
