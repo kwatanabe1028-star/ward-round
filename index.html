@@ -1261,6 +1261,21 @@ function copyShareLink() {
     });
 }
 
+/* ─────────────── SUBMITTED SLOTS ─────────────── */
+function isSlotSubmitted(date, team, roundType) {
+  return lsg('submittedSlots').some(
+    s => s.date === date && s.team === team && s.roundType === roundType
+  );
+}
+
+function markSlotSubmitted(date, team, roundType) {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  const fresh = lsg('submittedSlots').filter(s => new Date(s.sentAt) > cutoff);
+  fresh.push({ date, team, roundType, sentAt: new Date().toISOString() });
+  lss('submittedSlots', fresh);
+}
+
 /* ─────────────── CONCURRENT VALUE ─────────────── */
 function concurrentVal() {
   if (S.erDoc && S.hcuDoc) {
@@ -1338,12 +1353,19 @@ async function submitNoRound() {
   if (!payload.date) { toast('日付を入力してください'); return; }
   const label = `${payload.date} ${payload.team}チーム ${payload.roundType}ラウンド`;
   if (!confirm(`「${label}」を開催なしで記録します。よろしいですか？`)) return;
+  if (isSlotSubmitted(payload.date, payload.team, payload.roundType)) {
+    if (!confirm(`⚠️ このスロットは既に送信済みです。\n重複して送信しますか？`)) return;
+  }
   await send(payload, '開催なしを記録しました ✓');
 }
 
 async function submitRecord() {
   if (!getTeamMembers().length) { toast('メンバーを登録してください'); return; }
-  await send(buildRecordPayload(), '記録を送信しました ✓');
+  const payload = buildRecordPayload();
+  if (isSlotSubmitted(payload.date, payload.team, payload.roundType)) {
+    if (!confirm(`⚠️ このスロットは既に送信済みです。\n重複して送信しますか？`)) return;
+  }
+  await send(payload, '記録を送信しました ✓');
 }
 
 async function send(payload, successMsg) {
@@ -1396,6 +1418,7 @@ async function doSend(payload, successMsg) {
     if (json.status === 'ok') {
       localStorage.removeItem('pendingPayload');
       _pendingPayload = null;
+      markSlotSubmitted(payload.date, payload.team, payload.roundType);
       toast(successMsg);
       setTimeout(() => { _sending = false; goScreen('screen-home'); }, 1600);
     } else {
