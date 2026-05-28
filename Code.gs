@@ -77,19 +77,58 @@ function doPost(e) {
   }
 }
 
-// ── GET（動作確認 & メンバー取得） ─────────────────
+// ── GET（動作確認 & メンバー取得 & 集計） ──────────
 function doGet(e) {
-  if (e && e.parameter && e.parameter.action === 'getMembers') {
-    const props = PropertiesService.getScriptProperties();
-    return jsonResponse({
-      status: 'ok',
-      A: JSON.parse(props.getProperty('members_A') || '[]'),
-      B: JSON.parse(props.getProperty('members_B') || '[]'),
-    });
+  if (e && e.parameter) {
+    if (e.parameter.action === 'getMembers') {
+      const props = PropertiesService.getScriptProperties();
+      return jsonResponse({
+        status: 'ok',
+        A: JSON.parse(props.getProperty('members_A') || '[]'),
+        B: JSON.parse(props.getProperty('members_B') || '[]'),
+      });
+    }
+    if (e.parameter.action === 'getStats') {
+      return getWeekdayStats();
+    }
   }
   return ContentService
     .createTextOutput('病棟ラウンド集計 API は正常に動作しています。')
     .setMimeType(ContentService.MimeType.TEXT);
+}
+
+function getWeekdayStats() {
+  const src = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  if (!src) return jsonResponse({ status: 'error', message: 'シートが見つかりません' });
+
+  const rows = src.getDataRange().getValues();
+  // dow 1=月 2=火 3=水 4=木 5=金  値: { dateStr: count }
+  const byDow = { 1:{}, 2:{}, 3:{}, 4:{}, 5:{} };
+
+  for (let r = 1; r < rows.length; r++) {
+    const dateVal = rows[r][1];   // B 日付
+    const valid   = rows[r][14];  // O 記録信頼性
+    if (!dateVal || valid !== '含める') continue;
+
+    const d   = new Date(dateVal);
+    const dow = d.getDay();
+    if (dow < 1 || dow > 5) continue;
+
+    const dateStr = Utilities.formatDate(d, 'Asia/Tokyo', 'yyyy-MM-dd');
+    byDow[dow][dateStr] = (byDow[dow][dateStr] || 0) + 1;
+  }
+
+  const DAY_NAMES = { 1:'月', 2:'火', 3:'水', 4:'木', 5:'金' };
+  const stats = [1, 2, 3, 4, 5].map(dow => {
+    const entries      = Object.values(byDow[dow]);
+    const dayCount     = entries.length;
+    const totalRecords = entries.reduce((s, n) => s + n, 0);
+    const avgPerDay    = dayCount > 0 ? Math.round(totalRecords / dayCount * 10) / 10 : 0;
+    const daysOnTarget = entries.filter(n => n >= 2).length;
+    return { dow, dayName: DAY_NAMES[dow], dayCount, totalRecords, avgPerDay, daysOnTarget };
+  });
+
+  return jsonResponse({ status: 'ok', stats });
 }
 
 // ══════════════════════════════════════════════════
