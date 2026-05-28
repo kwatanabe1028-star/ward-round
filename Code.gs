@@ -174,9 +174,6 @@ function flattenAll() {
     const valid      = row[14];  // O 記録信頼性
     const jsonStr    = row[13];  // N 参加者詳細JSON
 
-    // 開催なしはメンバー行なし → スキップ
-    if (held === '開催なし') continue;
-
     // 介入フラグ（介入開始日未設定なら「未設定」）
     const flag = !interventionDate
       ? '未設定'
@@ -211,20 +208,21 @@ function flattenAll() {
         flag,                          // B 介入フラグ
         team,                          // C チーム
         roundType,                     // D ラウンド種別
-        erDoc,                         // E 救急外来専属医師
-        hcuDoc,                        // F HCU専属医師
-        concurrent,                    // G 兼任フラグ
-        startTime,                     // H 開始時刻
-        endTime,                       // I 終了時刻
-        name,                          // J 名前
-        role,                          // K 職種
-        status,                        // L ステータス
-        category,                      // M 参加区分
-        deps.length,                   // N 退席回数
-        absReason,                     // O 不参加理由
-        m.absenceReturnTime || '',     // P 不参加後復帰時刻
-        valid,                         // Q 記録信頼性
-        sentAt,                        // R 送信日時
+        held,                          // E 開催フラグ
+        erDoc,                         // F 救急外来専属医師
+        hcuDoc,                        // G HCU専属医師
+        concurrent,                    // H 兼任フラグ
+        startTime,                     // I 開始時刻
+        endTime,                       // J 終了時刻
+        name,                          // K 名前
+        role,                          // L 職種
+        status,                        // M ステータス
+        category,                      // N 参加区分
+        deps.length,                   // O 退席回数
+        absReason,                     // P 不参加理由
+        m.absenceReturnTime || '',     // Q 不参加後復帰時刻
+        valid,                         // R 記録信頼性
+        sentAt,                        // S 送信日時
       ]);
 
       // 退席詳細シートへの行（途中退席・不参加どちらも対象）
@@ -255,7 +253,7 @@ function flattenAll() {
   }
 
   writeSheet(ss, 'メンバー集計', [
-    '日付','介入フラグ','チーム','ラウンド種別',
+    '日付','介入フラグ','チーム','ラウンド種別','開催フラグ',
     '救急外来専属医師','HCU専属医師','兼任フラグ',
     '開始時刻','終了時刻',
     '名前','職種','ステータス','参加区分',

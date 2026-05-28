@@ -635,7 +635,29 @@
         </div>
       </div>
       <button class="btn btn-primary" id="btn-start" onclick="goTime()">記録を始める →</button>
-      <button class="btn btn-danger"  onclick="submitNoRound()">本日 開催なし で記録</button>
+      <button class="btn btn-danger"  onclick="goNoRound()">本日 開催なし で記録</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SCREEN: NO ROUND ═══════════════ -->
+  <div class="screen" id="screen-noround">
+    <div class="header">
+      <button class="back-btn" onclick="goScreen('screen-home')">‹ 戻る</button>
+      <h1><em>開催なし</em> 理由入力</h1>
+    </div>
+    <div style="padding:16px 14px 32px">
+      <div style="
+        background: color-mix(in srgb, var(--warn) 7%, var(--white));
+        border: 1px solid color-mix(in srgb, var(--warn) 28%, var(--white));
+        border-left: 3px solid var(--warn);
+        border-radius: 8px; padding: 10px 14px; margin-bottom: 14px;
+      ">
+        <p style="font-size:12px;color:var(--muted);line-height:1.6">
+          各メンバーの不参加理由を選択してください（任意）。
+        </p>
+      </div>
+      <div id="noround-members-list"></div>
+      <button class="btn btn-primary" onclick="submitNoRound()">開催なしで送信 ✓</button>
     </div>
   </div>
 
@@ -1287,6 +1309,14 @@ function concurrentVal() {
 
 /* ─────────────── BUILD PAYLOAD ─────────────── */
 function buildNoRoundPayload() {
+  const members = getTeamMembers();
+  const memberData = members.map((m, i) => {
+    const name = m.name || m;
+    const role = m.role || '';
+    const absenceReason = document.getElementById(`nr-rsn-${i}`)?.value || '';
+    const absenceReasonOther = document.getElementById(`nr-other-txt-${i}`)?.value || '';
+    return { name, role, status: '不参加', departures: [], absenceReason, absenceReasonOther, absenceReturnTime: '', comment: '' };
+  });
   return {
     date: document.getElementById('inp-date').value,
     team: S.team, roundType: S.round,
@@ -1294,8 +1324,8 @@ function buildNoRoundPayload() {
     hcuDoctor: S.hcuDoc ? 'いる' : 'いない',
     concurrent: concurrentVal(),
     held: false, startTime: '', endTime: '',
-    participantCount: 0, partialCount: 0, absentCount: 0,
-    members: [], valid: true, exclusionReason: '',
+    participantCount: 0, partialCount: 0, absentCount: memberData.length,
+    members: memberData, valid: true, exclusionReason: '',
   };
 }
 
@@ -1348,11 +1378,51 @@ let _sending = false;
 let _pendingPayload = null;
 let _pendingMsg     = '';
 
+function goNoRound() {
+  if (!document.getElementById('inp-date').value) { toast('日付を入力してください'); return; }
+  renderNoRoundMembers();
+  goScreen('screen-noround');
+}
+
+function renderNoRoundMembers() {
+  const members = getTeamMembers();
+  const el = document.getElementById('noround-members-list');
+  if (!members.length) {
+    el.innerHTML = `<div class="card"><p class="empty-note">メンバーが未登録です。<br>理由なしで送信されます。</p></div>`;
+    return;
+  }
+  el.innerHTML = members.map((m, i) => {
+    const name = m.name || m;
+    const role = m.role || '';
+    return `
+    <div class="member-card">
+      <div class="member-header">
+        ${name}
+        ${role ? `<span class="role-badge role-${role}">${role}</span>` : ''}
+      </div>
+      <div class="member-body">
+        <div class="reason-block">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--subtle);margin-bottom:4px">不参加の理由（任意）</label>
+          <select id="nr-rsn-${i}" onchange="onNrReasonChange(${i})">
+            <option value="">選択してください</option>
+            ${REASONS.map(r => `<option value="${r}">${r}</option>`).join('')}
+          </select>
+          <div id="nr-other-${i}" class="hidden mt8">
+            <input type="text" id="nr-other-txt-${i}" placeholder="その他の理由を入力" />
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function onNrReasonChange(i) {
+  const val = document.getElementById(`nr-rsn-${i}`)?.value;
+  document.getElementById(`nr-other-${i}`)?.classList.toggle('hidden', val !== 'その他');
+}
+
 async function submitNoRound() {
   const payload = buildNoRoundPayload();
-  if (!payload.date) { toast('日付を入力してください'); return; }
-  const label = `${payload.date} ${payload.team}チーム ${payload.roundType}ラウンド`;
-  if (!confirm(`「${label}」を開催なしで記録します。よろしいですか？`)) return;
   if (isSlotSubmitted(payload.date, payload.team, payload.roundType)) {
     if (!confirm(`⚠️ このスロットは既に送信済みです。\n重複して送信しますか？`)) return;
   }
