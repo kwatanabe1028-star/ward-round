@@ -1163,54 +1163,52 @@ async function loadStats() {
 }
 
 function renderStats(stats) {
-  const rows = stats.map(s => {
-    const avg = s.avgPerDay;
-    const color = avg >= 2   ? '#1E6068'
-                : avg >= 1   ? '#B86018'
-                :              '#c0003a';
-    const badge = avg >= 2   ? '✓ 達成'
-                : avg >= 1   ? '△ 少ない'
-                :              '✗ 不足';
-    const badgeBg = avg >= 2 ? 'color-mix(in srgb,#1E6068 12%,white)'
-                  : avg >= 1 ? 'color-mix(in srgb,#B86018 12%,white)'
-                  :            'color-mix(in srgb,#c0003a 10%,white)';
-    return `
-    <tr>
-      <td style="font-size:18px;font-weight:800;color:var(--dark);padding:12px 8px;text-align:center">${s.dayName}</td>
-      <td style="text-align:center;padding:12px 8px">
-        <span style="font-size:20px;font-weight:800;color:${color}">${avg}</span>
-        <span style="font-size:11px;color:var(--muted)"> 件/日</span>
-      </td>
-      <td style="text-align:center;padding:12px 8px;font-size:13px;color:var(--muted)">${s.daysOnTarget}/${s.dayCount}日</td>
-      <td style="text-align:center;padding:12px 8px">
-        <span style="
-          display:inline-block;font-size:11px;font-weight:700;
-          padding:3px 8px;border-radius:9px;
-          background:${badgeBg};color:${color};
-        ">${badge}</span>
-      </td>
-    </tr>`;
-  }).join('');
+  const cellStyle = n => {
+    const bg    = n === 0 ? 'color-mix(in srgb,#c0003a 10%,white)'
+                : n >= 3  ? 'color-mix(in srgb,#1E6068 12%,white)'
+                :            'color-mix(in srgb,#B86018 12%,white)';
+    const color = n === 0 ? '#c0003a' : n >= 3 ? '#1E6068' : '#B86018';
+    return `background:${bg};color:${color}`;
+  };
 
-  return `
-  <div class="card" style="padding:0;overflow:hidden">
-    <table style="width:100%;border-collapse:collapse">
-      <thead>
-        <tr style="background:color-mix(in srgb,var(--dark) 6%,var(--bg))">
-          <th style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--subtle);padding:8px;text-align:center">曜日</th>
-          <th style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--subtle);padding:8px;text-align:center">平均記録数</th>
-          <th style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--subtle);padding:8px;text-align:center">2件以上の日</th>
-          <th style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--subtle);padding:8px;text-align:center">判定</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>
-  <div class="card mt8" style="padding:10px 14px">
+  const teamTable = team => {
+    const bodyRows = stats.map(s => {
+      const am = s.slots[`${team}朝`] || 0;
+      const pm = s.slots[`${team}夕`] || 0;
+      return `
+      <tr>
+        <td style="font-size:15px;font-weight:800;color:var(--dark);padding:8px;text-align:center;width:36px">${s.dayName}</td>
+        <td style="text-align:center;padding:8px;${cellStyle(am)}">
+          <span style="font-size:16px;font-weight:700">${am}</span><span style="font-size:10px;opacity:.7">日</span>
+        </td>
+        <td style="text-align:center;padding:8px;${cellStyle(pm)}">
+          <span style="font-size:16px;font-weight:700">${pm}</span><span style="font-size:10px;opacity:.7">日</span>
+        </td>
+      </tr>`;
+    }).join('');
+    return `
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">
+      <div style="background:color-mix(in srgb,var(--dark) 8%,var(--bg));padding:7px 12px">
+        <span style="font-size:12px;font-weight:800;color:var(--dark);letter-spacing:.05em">${team}チーム</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:color-mix(in srgb,var(--dark) 4%,var(--bg))">
+            <th style="font-size:11px;font-weight:700;color:var(--subtle);padding:6px 8px;text-align:center">曜日</th>
+            <th style="font-size:11px;font-weight:700;color:var(--subtle);padding:6px 8px;text-align:center">朝</th>
+            <th style="font-size:11px;font-weight:700;color:var(--subtle);padding:6px 8px;text-align:center">夕</th>
+          </tr>
+        </thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>`;
+  };
+
+  return teamTable('A') + teamTable('B') + `
+  <div class="card" style="padding:10px 14px">
     <p style="font-size:11px;color:var(--subtle);line-height:1.7">
-      ・<strong style="color:var(--dark)">記録日数</strong>：その曜日に有効な入力があった日数（開催日数ではありません）<br>
-      ・<strong style="color:var(--dark)">平均記録数</strong>：記録日数ベースの1日あたり平均件数<br>
-      ・<strong style="color:var(--dark)">2件以上の日</strong>：A・Bチーム両方を記録できた日数が目安<br>
+      ・数字は<strong style="color:var(--dark)">記録日数</strong>（その曜日に有効な入力があった日数）<br>
+      ・開催日数ではありません<br>
       ・集計対象：記録信頼性「含める」のみ
     </p>
   </div>`;

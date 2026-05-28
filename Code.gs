@@ -106,11 +106,18 @@ function getWeekdayStats() {
   if (!src) return jsonResponse({ status: 'error', message: 'シートが見つかりません' });
 
   const rows = src.getDataRange().getValues();
-  // dow 1=月 2=火 3=水 4=木 5=金 6=土  値: { dateStr: count }
-  const byDow = { 1:{}, 2:{}, 3:{}, 4:{}, 5:{}, 6:{} };
+  // dow 1=月〜6=土、スロットキー = "A朝" / "A夕" / "B朝" / "B夕"
+  const SLOTS = ['A朝', 'A夕', 'B朝', 'B夕'];
+  const byDow = {};
+  for (let d = 1; d <= 6; d++) {
+    byDow[d] = {};
+    SLOTS.forEach(s => { byDow[d][s] = {}; });
+  }
 
   for (let r = 1; r < rows.length; r++) {
     const dateVal = rows[r][1];   // B 日付
+    const team    = rows[r][2];   // C チーム
+    const round   = rows[r][3];   // D ラウンド種別
     const valid   = rows[r][14];  // O 記録信頼性
     if (!dateVal || valid !== '含める') continue;
 
@@ -118,18 +125,23 @@ function getWeekdayStats() {
     const dow = d.getDay();
     if (dow < 1 || dow > 6) continue;
 
+    const roundKey = String(round).includes('朝') ? '朝'
+                   : String(round).includes('夕') ? '夕' : null;
+    if (!roundKey) continue;
+    const slotKey = `${team}${roundKey}`;
+    if (!byDow[dow][slotKey]) continue;
+
     const dateStr = Utilities.formatDate(d, 'Asia/Tokyo', 'yyyy-MM-dd');
-    byDow[dow][dateStr] = (byDow[dow][dateStr] || 0) + 1;
+    byDow[dow][slotKey][dateStr] = (byDow[dow][slotKey][dateStr] || 0) + 1;
   }
 
   const DAY_NAMES = { 1:'月', 2:'火', 3:'水', 4:'木', 5:'金', 6:'土' };
   const stats = [1, 2, 3, 4, 5, 6].map(dow => {
-    const entries      = Object.values(byDow[dow]);
-    const dayCount     = entries.length;
-    const totalRecords = entries.reduce((s, n) => s + n, 0);
-    const avgPerDay    = dayCount > 0 ? Math.round(totalRecords / dayCount * 10) / 10 : 0;
-    const daysOnTarget = entries.filter(n => n >= 2).length;
-    return { dow, dayName: DAY_NAMES[dow], dayCount, totalRecords, avgPerDay, daysOnTarget };
+    const slots = {};
+    SLOTS.forEach(s => {
+      slots[s] = Object.keys(byDow[dow][s]).length; // 記録日数
+    });
+    return { dow, dayName: DAY_NAMES[dow], slots };
   });
 
   return jsonResponse({ status: 'ok', stats });
