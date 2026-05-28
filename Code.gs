@@ -89,7 +89,11 @@ function doGet(e) {
       });
     }
     if (e.parameter.action === 'getStats') {
-      return getWeekdayStats();
+      try {
+        return getWeekdayStats();
+      } catch (err) {
+        return jsonResponse({ status: 'error', message: err.message });
+      }
     }
   }
   return ContentService
@@ -102,8 +106,8 @@ function getWeekdayStats() {
   if (!src) return jsonResponse({ status: 'error', message: 'シートが見つかりません' });
 
   const rows = src.getDataRange().getValues();
-  // dow 1=月 2=火 3=水 4=木 5=金  値: { dateStr: count }
-  const byDow = { 1:{}, 2:{}, 3:{}, 4:{}, 5:{} };
+  // dow 1=月 2=火 3=水 4=木 5=金 6=土  値: { dateStr: count }
+  const byDow = { 1:{}, 2:{}, 3:{}, 4:{}, 5:{}, 6:{} };
 
   for (let r = 1; r < rows.length; r++) {
     const dateVal = rows[r][1];   // B 日付
@@ -112,14 +116,14 @@ function getWeekdayStats() {
 
     const d   = new Date(dateVal);
     const dow = d.getDay();
-    if (dow < 1 || dow > 5) continue;
+    if (dow < 1 || dow > 6) continue;
 
     const dateStr = Utilities.formatDate(d, 'Asia/Tokyo', 'yyyy-MM-dd');
     byDow[dow][dateStr] = (byDow[dow][dateStr] || 0) + 1;
   }
 
-  const DAY_NAMES = { 1:'月', 2:'火', 3:'水', 4:'木', 5:'金' };
-  const stats = [1, 2, 3, 4, 5].map(dow => {
+  const DAY_NAMES = { 1:'月', 2:'火', 3:'水', 4:'木', 5:'金', 6:'土' };
+  const stats = [1, 2, 3, 4, 5, 6].map(dow => {
     const entries      = Object.values(byDow[dow]);
     const dayCount     = entries.length;
     const totalRecords = entries.reduce((s, n) => s + n, 0);

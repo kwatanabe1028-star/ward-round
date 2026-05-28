@@ -549,7 +549,6 @@
     <div class="header">
       <h1><em>Round with</em> Purpose</h1>
       <div class="header-right" style="display:flex;gap:6px">
-        <button class="settings-btn" onclick="goStats()">📊 状況</button>
         <button class="settings-btn" onclick="goSettings()">⚙ 設定</button>
       </div>
     </div>
@@ -637,6 +636,19 @@
       </div>
       <button class="btn btn-primary" id="btn-start" onclick="goTime()">記録を始める →</button>
       <button class="btn btn-danger"  onclick="goNoRound()">本日 開催なし で記録</button>
+
+      <div style="margin-top:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <p style="font-size:11px;font-weight:700;color:var(--subtle);letter-spacing:.08em">入力状況</p>
+          <button onclick="loadStats()" style="
+            background:none;border:none;font-size:14px;color:var(--subtle);
+            cursor:pointer;padding:2px 6px;font-family:inherit;
+          ">↻</button>
+        </div>
+        <div id="stats-content">
+          <div class="card"><p class="empty-note">読み込み中…</p></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -762,21 +774,6 @@
   </div>
 
   <!-- ═══════════════ SCREEN: STATS ═══════════════ -->
-  <div class="screen" id="screen-stats">
-    <div class="header">
-      <button class="back-btn" onclick="goScreen('screen-home')">‹ 戻る</button>
-      <h1><em>📊</em> 入力状況</h1>
-    </div>
-    <div style="padding:16px 14px 32px">
-      <div id="stats-content">
-        <div class="card">
-          <p class="empty-note">読み込み中…</p>
-        </div>
-      </div>
-      <button class="btn btn-outline" onclick="loadStats()" style="margin-top:4px">↻ 再読み込み</button>
-    </div>
-  </div>
-
   <!-- ═══════════════ SCREEN: SETTINGS ═══════════════ -->
   <div class="screen" id="screen-settings">
     <div class="header">
@@ -882,6 +879,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // GAS URLが設定済みならメンバーをバックグラウンドで同期
   const url = ls('gasUrl');
   if (url) syncMembersFromGas(url, false);
+  loadStats();
 });
 
 const p2  = n  => String(n).padStart(2, '0');
@@ -894,9 +892,9 @@ function goScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
+  if (id === 'screen-home') loadStats();
 }
 function goSettings() { renderSettings(); goScreen('screen-settings'); }
-function goStats()    { goScreen('screen-stats'); loadStats(); }
 function goTime()     { goScreen('screen-time'); }
 function goMembers()  {
   S.startTime = document.getElementById('inp-start').value;
@@ -1200,8 +1198,8 @@ function renderStats(stats) {
       <thead>
         <tr style="background:color-mix(in srgb,var(--dark) 6%,var(--bg))">
           <th style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--subtle);padding:8px;text-align:center">曜日</th>
-          <th style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--subtle);padding:8px;text-align:center">平均件数</th>
-          <th style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--subtle);padding:8px;text-align:center">目標達成日</th>
+          <th style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--subtle);padding:8px;text-align:center">平均記録数</th>
+          <th style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--subtle);padding:8px;text-align:center">2件以上の日</th>
           <th style="font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--subtle);padding:8px;text-align:center">判定</th>
         </tr>
       </thead>
@@ -1210,8 +1208,9 @@ function renderStats(stats) {
   </div>
   <div class="card mt8" style="padding:10px 14px">
     <p style="font-size:11px;color:var(--subtle);line-height:1.7">
-      ・<strong style="color:var(--dark)">平均件数</strong>：有効記録のある日だけを集計した1日あたりの平均<br>
-      ・<strong style="color:var(--dark)">目標達成日</strong>：1日2件以上記録できた日数<br>
+      ・<strong style="color:var(--dark)">記録日数</strong>：その曜日に有効な入力があった日数（開催日数ではありません）<br>
+      ・<strong style="color:var(--dark)">平均記録数</strong>：記録日数ベースの1日あたり平均件数<br>
+      ・<strong style="color:var(--dark)">2件以上の日</strong>：A・Bチーム両方を記録できた日数が目安<br>
       ・集計対象：記録信頼性「含める」のみ
     </p>
   </div>`;
