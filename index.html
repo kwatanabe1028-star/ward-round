@@ -611,7 +611,7 @@
   <!-- ═══════════════ SCREEN 3: MEMBERS ═══════════════ -->
   <div class="screen" id="screen-members">
     <div class="header">
-      <button class="back-btn" onclick="goScreen('screen-time')">‹ 戻る</button>
+      <button class="back-btn" onclick="goBackFromMembers()">‹ 戻る</button>
       <h1><em>Step 2</em> 参加状況</h1>
     </div>
     <div style="padding:16px 14px 32px">
@@ -799,6 +799,11 @@ function goMembers()  {
   S.startTime = document.getElementById('inp-start').value;
   renderMembers();
   goScreen('screen-members');
+}
+function goBackFromMembers() {
+  const hasInput = Object.values(mStatus).some(s => s !== '参加');
+  if (hasInput && !confirm('入力中のデータが失われます。戻りますか？')) return;
+  goScreen('screen-time');
 }
 
 /* ─────────────── SEGMENT ─────────────── */
