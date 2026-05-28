@@ -1529,13 +1529,21 @@ function renderNoRoundMembers() {
       </div>
       <div class="member-body">
         <div class="reason-block">
-          <label style="display:block;font-size:12px;font-weight:600;color:var(--subtle);margin-bottom:4px">不参加の理由（任意）</label>
-          <select id="nr-rsn-${i}" onchange="onNrReasonChange(${i})">
-            <option value="">選択してください</option>
-            ${REASONS.map(r => `<option value="${r}">${r}</option>`).join('')}
-          </select>
-          <div id="nr-other-${i}" class="hidden mt8">
-            <input type="text" id="nr-other-txt-${i}" placeholder="その他の理由を入力" />
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--subtle);margin-bottom:6px">不参加の理由（任意）</label>
+          <input type="hidden" id="nr-rsn-${i}" value="" />
+          <div class="status-row" style="margin-bottom:8px">
+            <button class="status-btn" id="nr-btn-holiday-${i}"   onclick="setNrReason(${i},'休日')">休日</button>
+            <button class="status-btn" id="nr-btn-yamato-${i}"    onclick="setNrReason(${i},'大和病院')">大和病院</button>
+            <button class="status-btn" id="nr-btn-other-${i}"     onclick="setNrReason(${i},'__other__')">その他の理由</button>
+          </div>
+          <div id="nr-select-${i}" class="hidden">
+            <select id="nr-rsn-sel-${i}" onchange="onNrSelectChange(${i})">
+              <option value="">選択してください</option>
+              ${REASONS.map(r => `<option value="${r}">${r}</option>`).join('')}
+            </select>
+            <div id="nr-other-${i}" class="hidden mt8">
+              <input type="text" id="nr-other-txt-${i}" placeholder="その他の理由を入力" />
+            </div>
           </div>
         </div>
       </div>
@@ -1543,8 +1551,26 @@ function renderNoRoundMembers() {
   }).join('');
 }
 
-function onNrReasonChange(i) {
-  const val = document.getElementById(`nr-rsn-${i}`)?.value;
+function setNrReason(i, val) {
+  ['holiday','yamato','other'].forEach(k => {
+    const id = `nr-btn-${k}-${i}`;
+    document.getElementById(id)?.classList.remove('s-途中退席');
+  });
+  const keyMap = { '休日':'holiday', '大和病院':'yamato', '__other__':'other' };
+  document.getElementById(`nr-btn-${keyMap[val]}-${i}`)?.classList.add('s-途中退席');
+
+  const isOther = val === '__other__';
+  document.getElementById(`nr-select-${i}`).classList.toggle('hidden', !isOther);
+  if (!isOther) {
+    document.getElementById(`nr-rsn-${i}`).value = val;
+  } else {
+    document.getElementById(`nr-rsn-${i}`).value = '';
+  }
+}
+
+function onNrSelectChange(i) {
+  const val = document.getElementById(`nr-rsn-sel-${i}`)?.value || '';
+  document.getElementById(`nr-rsn-${i}`).value = val;
   document.getElementById(`nr-other-${i}`)?.classList.toggle('hidden', val !== 'その他');
 }
 
