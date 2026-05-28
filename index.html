@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Round with Purpose</title>
+  <style>
+    /* ══════════════════════════════════════
+       Design tokens — Clinical Lounge 共通
+    ══════════════════════════════════════ */
+    :root {
+      --bg:       #D6D1C2;
+      --dark:     #1C3530;
+      --a1:       #4E7868;
+      --a2:       #3A6E5E;
+      --a3:       #286858;
+      --a4:       #1E6068;
+      --a5:       #1C5A72;
+      --a6:       #196E96;
+      --warn:     #B86018;
+      --white:    #FFFFFF;
+
+      --border:   color-mix(in srgb, var(--dark) 18%, var(--white));
+      --muted:    color-mix(in srgb, var(--dark) 75%, var(--bg));
+      --subtle:   color-mix(in srgb, var(--dark) 52%, var(--bg));
+      --shadow:   0 6px 22px color-mix(in srgb, var(--dark) 18%, transparent);
+      --shadow-s: 0 2px 8px  color-mix(in srgb, var(--dark) 12%, transparent);
+    }
+
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+      background: var(--bg);
+      color: var(--dark);
+      min-height: 100vh;
+      font-size: 16px;
+      line-height: 1.55;
+      letter-spacing: 0.02em;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Background scene (デスクトップ向け装飾) ── */
+    .scene {
+      position: fixed; inset: 0; z-index: -1;
+      pointer-events: none; overflow: hidden;
+    }
+    .scene__plane {
+      position: absolute;
+    }
+    .scene__plane--lime {
+      width: min(125vw, 52rem); height: 40vh;
+      top: -8%; left: -22%;
+      background: color-mix(in srgb, var(--a1) 20%, var(--bg));
+      transform: rotate(-4deg);
+    }
+    .scene__plane--green {
+      width: 58vw; max-width: 26rem; height: min(60vh, 26rem);
+      bottom: -14%; right: -18%;
+      background: color-mix(in srgb, var(--dark) 12%, var(--bg));
+      transform: rotate(5deg); border-radius: 0 0 0 18%;
+    }
+    .scene__band {
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 4px; background: var(--a6);
+    }
+
+    /* ── App container ── */
+    .app {
+      position: relative; z-index: 0;
+      max-width: 480px; margin: 0 auto;
+    }
+
+    /* ── Test banner ── */
+    .test-banner {
+      background: var(--warn); color: var(--white);
+      text-align: center; padding: 6px 12px;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+    }
+
+    /* ── App header ── */
+    .header {
+      position: sticky; top: 0; z-index: 100;
+      background: linear-gradient(
+        118deg,
+        color-mix(in srgb, var(--dark) 52%, var(--a3)) 0%,
+        color-mix(in srgb, var(--a3) 55%, var(--a4)) 40%,
+        color-mix(in srgb, var(--a4) 50%, var(--a5)) 70%,
+        color-mix(in srgb, var(--a5) 42%, var(--a6)) 100%
+      );
+      border-bottom: 1px solid color-mix(in srgb, var(--dark) 28%, var(--a4));
+      box-shadow: 0 2px 10px color-mix(in srgb, var(--dark) 20%, transparent);
+      padding: 13px 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .header h1 {
+      font-size: 16px; font-weight: 800;
+      color: var(--white); letter-spacing: 0.04em;
+    }
+    .header h1 em {
+      font-style: normal; font-size: 0.65em; font-weight: 600;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: color-mix(in srgb, var(--white) 78%, var(--a6));
+      margin-right: 0.5em;
+    }
+    .header-right { margin-left: auto; }
+    .back-btn {
+      background: none; border: none; cursor: pointer; padding: 3px 8px 3px 0;
+      font-size: 16px; font-weight: 600;
+      color: color-mix(in srgb, var(--white) 88%, var(--a6));
+    }
+    .settings-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 13px; font-weight: 600; letter-spacing: 0.04em;
+      color: color-mix(in srgb, var(--white) 82%, var(--a6));
+      padding: 4px 8px;
+      border: 1px solid color-mix(in srgb, var(--white) 30%, var(--a5));
+      border-radius: 6px;
+    }
+
+    /* ── Screens ── */
+    .screen { display: none; padding: 16px 14px 32px; }
+    .screen.active { display: block; }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--subtle);
+      margin: 0 0 6px 2px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-s);
+    }
+    .card-title {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--a2);
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid color-mix(in srgb, var(--a1) 18%, var(--white));
+    }
+
+    /* ── Segment ── */
+    .segment {
+      display: flex;
+      background: color-mix(in srgb, var(--dark) 8%, var(--bg));
+      border: 1px solid var(--border);
+      border-radius: 8px; padding: 2px; gap: 2px;
+    }
+    .segment button {
+      flex: 1; padding: 8px 4px; border: none;
+      background: transparent; border-radius: 6px;
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      color: var(--muted); transition: all .15s;
+      font-family: inherit;
+    }
+    .segment button.active {
+      background: var(--white);
+      box-shadow: var(--shadow-s);
+      color: var(--dark); font-weight: 700;
+    }
+
+    /* ── Toggle pair ── */
+    .toggle-row {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid color-mix(in srgb, var(--dark) 7%, var(--white));
+    }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-label { font-size: 15px; color: var(--dark); }
+    .toggle-pair {
+      display: flex;
+      background: color-mix(in srgb, var(--dark) 8%, var(--bg));
+      border: 1px solid var(--border);
+      border-radius: 7px; padding: 2px; gap: 2px;
+    }
+    .toggle-pair button {
+      padding: 5px 13px; border: none; background: transparent;
+      border-radius: 5px; font-size: 13px; font-weight: 600;
+      cursor: pointer; color: var(--subtle); transition: all .15s;
+      font-family: inherit;
+    }
+    .toggle-pair button.active {
+      background: var(--white);
+      box-shadow: var(--shadow-s);
+      color: var(--dark);
+    }
+    .toggle-pair button.active.yes { color: var(--a3); }
+    .toggle-pair button.active.no  { color: var(--subtle); }
+
+    /* ── Inputs ── */
+    input[type="date"], input[type="time"], input[type="text"], textarea, select {
+      width: 100%; padding: 10px 12px;
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: 15px; font-family: inherit;
+      background: var(--white); color: var(--dark);
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--a4);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--a4) 18%, transparent);
+    }
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234E7868' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+    }
+    textarea { resize: none; height: 68px; font-size: 14px; }
+
+    /* ── Time row ── */
+    .time-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .time-row:last-child { margin-bottom: 0; }
+    .time-row label { font-size: 14px; color: var(--muted); min-width: 40px; }
+    .time-row input { flex: 1; }
+    .now-btn {
+      padding: 8px 11px;
+      background: color-mix(in srgb, var(--a4) 12%, var(--white));
+      color: var(--a5);
+      border: 1px solid color-mix(in srgb, var(--a4) 35%, var(--white));
+      border-radius: 7px;
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      white-space: nowrap; font-family: inherit;
+      letter-spacing: 0.03em;
+    }
+    .now-btn:active { opacity: .7; }
+
+    /* ── Buttons ── */
+    .btn {
+      width: 100%; padding: 14px 16px; border-radius: 10px; border: none;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+      margin-bottom: 10px; transition: opacity .15s;
+      font-family: inherit; letter-spacing: 0.02em;
+    }
+    .btn:last-child { margin-bottom: 0; }
+    .btn:active { opacity: .72; }
+    .btn-primary {
+      background: linear-gradient(
+        118deg,
+        color-mix(in srgb, var(--dark) 50%, var(--a3)) 0%,
+        color-mix(in srgb, var(--a4) 60%, var(--a5)) 60%,
+        var(--a6) 100%
+      );
+      color: var(--white);
+      box-shadow: 0 3px 12px color-mix(in srgb, var(--dark) 22%, transparent);
+    }
+    .btn-test {
+      background: linear-gradient(118deg, var(--warn) 0%, color-mix(in srgb, var(--warn) 70%, #c04400) 100%);
+      color: var(--white);
+      box-shadow: 0 3px 12px color-mix(in srgb, var(--warn) 28%, transparent);
+    }
+    .btn-outline {
+      background: var(--white); color: var(--a5);
+      border: 1.5px solid color-mix(in srgb, var(--a5) 55%, var(--white));
+    }
+    .btn-danger {
+      background: color-mix(in srgb, var(--warn) 8%, var(--white));
+      color: var(--warn);
+      border: 1.5px solid color-mix(in srgb, var(--warn) 38%, var(--white));
+    }
+
+    /* ── Role badges ── */
+    .role-badge {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      padding: 2px 7px; border-radius: 9px;
+      margin-left: 7px; vertical-align: middle;
+      letter-spacing: 0.04em;
+    }
+    .role-指導医   { background: color-mix(in srgb, var(--dark) 14%, var(--bg)); color: var(--dark); }
+    .role-スタッフ  { background: color-mix(in srgb, var(--a3) 20%, var(--white)); color: var(--a3); }
+    .role-レジデント { background: color-mix(in srgb, var(--a6) 16%, var(--white)); color: var(--a5); }
+    .role-研修医   { background: color-mix(in srgb, var(--warn) 16%, var(--white)); color: var(--warn); }
+    .role-NP       { background: color-mix(in srgb, #7c5cbf 16%, var(--white)); color: #7c5cbf; }
+
+    /* ── Member card ── */
+    .member-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: 10px; margin-bottom: 10px; overflow: hidden;
+      box-shadow: var(--shadow-s);
+    }
+    .member-header {
+      padding: 11px 14px;
+      background: linear-gradient(to right,
+        color-mix(in srgb, var(--a1) 12%, var(--white)),
+        var(--white));
+      border-bottom: 1px solid var(--border);
+      font-size: 15px; font-weight: 700; color: var(--dark);
+    }
+    .member-body { padding: 12px 14px; }
+
+    /* ── Status buttons ── */
+    .status-row { display: flex; gap: 6px; }
+    .status-btn {
+      flex: 1; padding: 8px 4px; border-radius: 7px;
+      border: 1.5px solid var(--border);
+      background: color-mix(in srgb, var(--dark) 3%, var(--white));
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      text-align: center; transition: all .15s;
+      font-family: inherit; color: var(--muted);
+    }
+    .status-btn.s-参加    {
+      background: color-mix(in srgb, var(--a2) 14%, var(--white));
+      border-color: var(--a2); color: var(--a2);
+    }
+    .status-btn.s-途中退席 {
+      background: color-mix(in srgb, var(--warn) 14%, var(--white));
+      border-color: var(--warn); color: var(--warn);
+    }
+    .status-btn.s-不参加  {
+      background: color-mix(in srgb, #c0003a 12%, var(--white));
+      border-color: #c0003a; color: #c0003a;
+    }
+    .status-btn.s-休日    {
+      background: color-mix(in srgb, #7c5cbf 12%, var(--white));
+      border-color: #7c5cbf; color: #7c5cbf;
+    }
+    .status-btn.s-大和病院 {
+      background: color-mix(in srgb, var(--a5) 14%, var(--white));
+      border-color: var(--a5); color: var(--a5);
+    }
+    .status-row { flex-wrap: wrap; }
+    .status-row .status-btn { flex: 1 1 calc(33% - 4px); min-width: 56px; }
+
+    /* ── Reason block ── */
+    .reason-block { margin-top: 10px; }
+    .reason-block label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--subtle); margin-bottom: 4px; letter-spacing: 0.04em;
+    }
+    .reason-block > * + * { margin-top: 8px; }
+
+    /* ── Departure event list ── */
+    .dep-event {
+      background: color-mix(in srgb, var(--warn) 6%, var(--white));
+      border: 1px solid color-mix(in srgb, var(--warn) 24%, var(--white));
+      border-radius: 8px; padding: 10px 12px; margin-top: 10px;
+    }
+    .dep-event-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .dep-event-label {
+      font-size: 12px; font-weight: 700; color: var(--warn);
+      letter-spacing: 0.05em;
+    }
+    .dep-event-del {
+      background: none; border: none; cursor: pointer;
+      font-size: 13px; color: #c0003a; font-weight: 700;
+      padding: 2px 6px;
+      border: 1px solid color-mix(in srgb, #c0003a 30%, var(--white));
+      border-radius: 5px; font-family: inherit;
+    }
+    .dep-event > * + * { margin-top: 8px; }
+    .dep-event label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--subtle); margin-bottom: 3px;
+    }
+    .dep-return-row {
+      background: color-mix(in srgb, var(--a2) 7%, var(--white));
+      border: 1px solid color-mix(in srgb, var(--a2) 22%, var(--white));
+      border-radius: 7px; padding: 8px 10px; margin-top: 8px;
+    }
+    .dep-return-row label { color: var(--a3) !important; }
+    .add-dep-btn {
+      width: 100%; margin-top: 10px; padding: 9px;
+      background: none;
+      border: 1.5px dashed color-mix(in srgb, var(--warn) 40%, var(--white));
+      border-radius: 8px; color: var(--warn);
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      font-family: inherit; letter-spacing: 0.03em;
+    }
+    .add-dep-btn:hover {
+      background: color-mix(in srgb, var(--warn) 6%, var(--white));
+    }
+
+    /* ── Absence event block ── */
+    .abs-event {
+      background: color-mix(in srgb, #c0003a 5%, var(--white));
+      border: 1px solid color-mix(in srgb, #c0003a 22%, var(--white));
+      border-radius: 8px; padding: 10px 12px; margin-top: 10px;
+    }
+    .abs-event label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--subtle); margin-bottom: 3px;
+    }
+    .abs-event > * + * { margin-top: 8px; }
+    .abs-return-row {
+      background: color-mix(in srgb, var(--a2) 7%, var(--white));
+      border: 1px solid color-mix(in srgb, var(--a2) 22%, var(--white));
+      border-radius: 7px; padding: 8px 10px; margin-top: 8px;
+    }
+    .abs-return-row label { color: var(--a3) !important; }
+
+    /* ── Validity card ── */
+    .validity-card {
+      background: color-mix(in srgb, var(--warn) 7%, var(--white));
+      border: 1px solid color-mix(in srgb, var(--warn) 28%, var(--white));
+      border-radius: 10px; padding: 14px 16px; margin-bottom: 14px;
+      box-shadow: var(--shadow-s);
+    }
+    .validity-card .card-title { color: color-mix(in srgb, var(--warn) 80%, var(--dark)); }
+
+    /* ── Settings ── */
+    .member-item {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid color-mix(in srgb, var(--dark) 7%, var(--white));
+    }
+    .member-item:last-child { border-bottom: none; }
+    .member-info { font-size: 15px; color: var(--dark); }
+    .del-btn {
+      background: none; border: none;
+      color: #c0003a; font-size: 20px; cursor: pointer; line-height: 1;
+      opacity: .7;
+    }
+    .del-btn:hover { opacity: 1; }
+    .add-row {
+      display: grid; grid-template-columns: 1fr 1fr auto;
+      gap: 6px; margin-top: 12px;
+    }
+    .add-row input, .add-row select { min-width: 0; }
+    .add-row button {
+      padding: 10px 13px;
+      background: linear-gradient(118deg, var(--a3), var(--a5));
+      color: var(--white);
+      border: none; border-radius: 8px;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      font-family: inherit; white-space: nowrap;
+    }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(28, 53, 48, .55);
+      z-index: 500; display: flex;
+      align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal {
+      background: var(--white);
+      border-radius: 16px 16px 0 0;
+      border-top: 4px solid var(--a6);
+      padding: 20px 18px 36px;
+      width: 100%; max-width: 480px;
+      max-height: 80vh; overflow-y: auto;
+    }
+    .modal-title {
+      font-size: 16px; font-weight: 800; margin-bottom: 12px;
+      color: var(--dark); display: flex; align-items: center; gap: 8px;
+    }
+    .modal-badge {
+      background: var(--warn); color: var(--white);
+      font-size: 10px; font-weight: 700; padding: 2px 8px;
+      border-radius: 9px; letter-spacing: 0.06em;
+    }
+    .modal-body {
+      background: color-mix(in srgb, var(--dark) 4%, var(--bg));
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px; font-size: 12px; line-height: 1.75;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      white-space: pre-wrap; word-break: break-all;
+      margin-bottom: 14px; color: var(--dark);
+    }
+    .modal-actions { display: flex; flex-direction: column; gap: 8px; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 32px; left: 50%;
+      transform: translateX(-50%) translateY(72px);
+      background: color-mix(in srgb, var(--dark) 92%, var(--a3));
+      color: var(--white);
+      padding: 10px 20px; border-radius: 20px;
+      font-size: 14px; font-weight: 600;
+      transition: transform .25s; z-index: 999;
+      white-space: nowrap; pointer-events: none;
+      box-shadow: 0 4px 16px color-mix(in srgb, var(--dark) 30%, transparent);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── Util ── */
+    .hidden { display: none !important; }
+    .mt8  { margin-top: 8px; }
+    .mt12 { margin-top: 12px; }
+    .mt16 { margin-top: 16px; }
+    .empty-note {
+      color: var(--subtle); font-size: 13px;
+      padding: 8px 0; text-align: center; line-height: 1.6;
+    }
+    .divider {
+      border: none; border-top: 1px solid var(--border); margin: 14px 0;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 背景装飾 -->
+<div class="scene" aria-hidden="true">
+  <div class="scene__plane scene__plane--lime"></div>
+  <div class="scene__plane scene__plane--green"></div>
+  <div class="scene__band"></div>
+</div>
+
+<div class="app">
+  <div class="toast" id="toast"></div>
+
+  <!-- テストモードバナー -->
+  <div id="test-banner" class="test-banner hidden">
+    🧪 TEST MODE — データは送信されません
+  </div>
+
+  <!-- ═══════════════ SCREEN 1: HOME ═══════════════ -->
+  <div class="screen active" id="screen-home">
+    <div class="header">
+      <h1><em>Round with</em> Purpose</h1>
+      <div class="header-right">
+        <button class="settings-btn" onclick="goSettings()">⚙ 設定</button>
+      </div>
+    </div>
+    <div style="padding:16px 14px 32px">
+
+      <div class="card">
+        <div class="card-title">日付</div>
+        <input type="date" id="inp-date" />
+      </div>
+
+      <div class="card">
+        <div class="card-title">チーム</div>
+        <div class="segment" id="seg-team">
+          <button class="active" onclick="seg('team','A',this)">Aチーム</button>
+          <button onclick="seg('team','B',this)">Bチーム</button>
+        </div>
+        <div class="card-title mt12">ラウンド種別</div>
+        <div class="segment" id="seg-round">
+          <button class="active" onclick="seg('round','朝',this)">朝ラウンド</button>
+          <button onclick="seg('round','夕',this)">夕ラウンド</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">今日の専属医師体制</div>
+        <div class="toggle-row">
+          <span class="toggle-label">救急外来専属医師</span>
+          <div class="toggle-pair">
+            <button id="er-y"              onclick="setDoctor('er',true)">いる</button>
+            <button id="er-n" class="active no"  onclick="setDoctor('er',false)">いない</button>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">HCU専属医師</span>
+          <div class="toggle-pair">
+            <button id="hcu-y"              onclick="setDoctor('hcu',true)">いる</button>
+            <button id="hcu-n" class="active no"  onclick="setDoctor('hcu',false)">いない</button>
+          </div>
+        </div>
+        <div class="toggle-row hidden" id="conc-row">
+          <span class="toggle-label" style="color:var(--warn);font-weight:700">同一人物（兼任）?<span style="font-size:11px;margin-left:4px">※要選択</span></span>
+          <div class="toggle-pair">
+            <button id="conc-y" onclick="setConcurrent(true)">はい</button>
+            <button id="conc-n"                               onclick="setConcurrent(false)">いいえ</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="
+        background: color-mix(in srgb, var(--a4) 8%, var(--white));
+        border: 1px solid color-mix(in srgb, var(--a4) 28%, var(--white));
+        border-left: 3px solid var(--a5);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-bottom: 14px;
+      ">
+        <p style="font-size:11px;font-weight:700;letter-spacing:0.08em;color:var(--a4);margin-bottom:4px;">ℹ️ NOTE</p>
+        <p style="font-size:12px;color:var(--muted);line-height:1.6;">
+          <strong style="color:var(--dark)">HCU専属医師</strong>とは、HCU管理に専従するために配置された医師です。<br>
+          チームメンバーが日常業務として行う<strong style="color:var(--dark)">HCUラウンド業務</strong>とは異なります。
+        </p>
+      </div>
+
+      <button class="btn btn-primary" id="btn-start" onclick="goTime()">記録を始める →</button>
+      <button class="btn btn-danger"  onclick="submitNoRound()">本日 開催なし で記録</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SCREEN 2: TIME ═══════════════ -->
+  <div class="screen" id="screen-time">
+    <div class="header">
+      <button class="back-btn" onclick="goScreen('screen-home')">‹ 戻る</button>
+      <h1><em>Step 1</em> 開始時刻</h1>
+    </div>
+    <div style="padding:16px 14px 32px">
+      <div class="card">
+        <div class="card-title">ラウンド開始時刻</div>
+        <div class="time-row">
+          <label>開始</label>
+          <input type="time" id="inp-start" />
+          <button class="now-btn" onclick="setNow('inp-start')">現在時刻</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="goMembers()">参加状況の入力へ →</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SCREEN 3: MEMBERS ═══════════════ -->
+  <div class="screen" id="screen-members">
+    <div class="header">
+      <button class="back-btn" onclick="goScreen('screen-time')">‹ 戻る</button>
+      <h1><em>Step 2</em> 参加状況</h1>
+    </div>
+    <div style="padding:16px 14px 32px">
+      <div id="members-list"></div>
+
+      <!-- 終了時刻 -->
+      <div style="
+        background: linear-gradient(
+          118deg,
+          color-mix(in srgb, var(--dark) 52%, var(--a3)) 0%,
+          color-mix(in srgb, var(--a4) 60%, var(--a5)) 70%,
+          var(--a6) 100%
+        );
+        border-radius: 12px;
+        padding: 16px 18px;
+        margin-bottom: 14px;
+        box-shadow: 0 4px 16px color-mix(in srgb, var(--dark) 24%, transparent);
+      ">
+        <p style="
+          font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: color-mix(in srgb, var(--white) 70%, var(--a6));
+          margin-bottom: 10px;
+        ">🏁 ラウンド終了時刻</p>
+        <div style="display:flex; gap:10px; align-items:center">
+          <input type="time" id="inp-end" style="
+            flex: 1;
+            background: color-mix(in srgb, var(--white) 15%, transparent);
+            border: 1.5px solid color-mix(in srgb, var(--white) 35%, transparent);
+            border-radius: 8px;
+            color: var(--white);
+            font-size: 22px;
+            font-weight: 700;
+            padding: 10px 14px;
+            letter-spacing: 0.06em;
+            -webkit-appearance: none;
+            appearance: none;
+          " />
+          <button class="now-btn" onclick="setNow('inp-end')" style="
+            background: color-mix(in srgb, var(--white) 18%, transparent);
+            border: 1.5px solid color-mix(in srgb, var(--white) 40%, transparent);
+            color: var(--white);
+            font-size: 12px;
+            padding: 10px 12px;
+          ">現在時刻</button>
+        </div>
+      </div>
+
+      <div class="validity-card">
+        <div class="card-title">📋 この記録について</div>
+        <div class="toggle-row" style="border:none;padding-bottom:0">
+          <span class="toggle-label" style="font-size:15px">分析に含める</span>
+          <div class="toggle-pair">
+            <button id="v-y" class="active yes" onclick="setValidity(true)">含める</button>
+            <button id="v-n"                    onclick="setValidity(false)">含めない</button>
+          </div>
+        </div>
+        <div id="excl-block" class="hidden mt8">
+          <label style="font-size:12px;font-weight:600;color:var(--warn)">除外理由（任意）</label>
+          <textarea id="excl-reason" placeholder="例：後から記憶で入力した　など"></textarea>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="submitRecord()">送信する ✓</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SCREEN: SETTINGS ═══════════════ -->
+  <div class="screen" id="screen-settings">
+    <div class="header">
+      <button class="back-btn" onclick="goScreen('screen-home')">‹ 戻る</button>
+      <h1><em>Config</em> 設定</h1>
+    </div>
+    <div style="padding:16px 14px 32px">
+
+      <div class="card">
+        <div class="card-title">テストモード</div>
+        <div class="toggle-row" style="border:none">
+          <span class="toggle-label">テスト入力・送信</span>
+          <div class="toggle-pair">
+            <button id="tm-on"  onclick="setTestMode(true)">ON</button>
+            <button id="tm-off" class="active" onclick="setTestMode(false)">OFF</button>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--subtle);margin-top:6px;line-height:1.5">
+          ONにすると送信ボタンを押してもデータは送られず、送信内容を画面で確認できます。
+        </p>
+      </div>
+
+      <div id="settings-body"></div>
+
+      <div class="card mt12">
+        <div class="card-title">Google Apps Script URL</div>
+        <input type="text" id="inp-gasurl" placeholder="https://script.google.com/macros/s/..." />
+        <button class="btn btn-primary mt8" onclick="saveGasUrl()" style="margin-bottom:8px">保存</button>
+        <button class="btn btn-outline" onclick="copyShareLink()" style="margin-bottom:8px">🔗 共有リンクをコピー</button>
+        <button class="btn btn-outline" onclick="manualSync()" style="margin-bottom:0">↻ メンバーを今すぐ同期</button>
+        <p style="font-size:12px;color:var(--subtle);margin-top:6px;line-height:1.5">
+          「共有リンクをコピー」で作ったリンクを送ると、受け取った人がタップするだけで設定完了になります。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ MODAL: テスト確認 ═══════════════ -->
+  <div class="modal-overlay hidden" id="modal-overlay" onclick="closeModal(event)">
+    <div class="modal">
+      <div class="modal-title">
+        送信データの確認
+        <span class="modal-badge">TEST MODE</span>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-actions">
+        <button class="btn btn-test"    onclick="closeModalAndReset()">✓ 確認しました（ホームへ）</button>
+        <button class="btn btn-outline" onclick="closeModal()">✕ 閉じて修正する</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+/* ─────────────── STATE ─────────────── */
+const S = {
+  team: 'A', round: '朝',
+  erDoc: false, hcuDoc: false, concurrent: null, // null = 未選択
+  valid: true, startTime: '', endTime: '',
+};
+
+const REASONS = [
+  '救急外来対応',
+  '一般外来',
+  'フォローアップ外来',
+  'HCUラウンド業務（定常）',
+  '重症患者対応（HCU/ICU管理）',
+  '予期せぬ急変・緊急対応（突発）',
+  '会議・カンファレンス',
+  '家族対応',
+  '院外業務',
+  '事務作業（カルテ・書類・オーダー）',
+  '当直明け・疲労配慮',
+  'その他',
+];
+
+const ROLES = ['指導医', 'スタッフ', 'レジデント', '研修医', 'NP'];
+const mStatus     = {};
+const mDepartures = {}; // { [i]: [ {depTime, reason, returnTime} ] }
+
+/* ─────────────── INIT ─────────────── */
+window.addEventListener('DOMContentLoaded', () => {
+  const t = new Date();
+  document.getElementById('inp-date').value =
+    `${t.getFullYear()}-${p2(t.getMonth()+1)}-${p2(t.getDate())}`;
+
+  // URLパラメータに ?gas= があれば自動保存
+  const params = new URLSearchParams(location.search);
+  const gasFromUrl = params.get('gas');
+  if (gasFromUrl) {
+    lss('gasUrl', gasFromUrl);
+    // パラメータをURLから除去（ブックマーク汚染を防ぐ）
+    history.replaceState(null, '', location.pathname);
+  }
+
+  document.getElementById('inp-gasurl').value = ls('gasUrl') || '';
+  applyTestMode(ls('testMode') === 'true');
+  // GAS URLが設定済みならメンバーをバックグラウンドで同期
+  const url = ls('gasUrl');
+  if (url) syncMembersFromGas(url, false);
+});
+
+const p2  = n  => String(n).padStart(2, '0');
+const ls  = k  => localStorage.getItem(k);
+const lss = (k,v) => localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+const lsg = k  => JSON.parse(ls(k) || '[]');
+
+/* ─────────────── NAVIGATION ─────────────── */
+function goScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+function goSettings() { renderSettings(); goScreen('screen-settings'); }
+function goTime()     { goScreen('screen-time'); }
+function goMembers()  {
+  S.startTime = document.getElementById('inp-start').value;
+  renderMembers();
+  goScreen('screen-members');
+}
+
+/* ─────────────── SEGMENT ─────────────── */
+function seg(type, val, btn) {
+  const id = type === 'team' ? 'seg-team' : 'seg-round';
+  document.querySelectorAll(`#${id} button`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (type === 'team') S.team  = val;
+  else                 S.round = val;
+}
+
+/* ─────────────── DOCTOR TOGGLES ─────────────── */
+function setDoctor(type, yes) {
+  if (type === 'er')  { S.erDoc  = yes; setToggle('er-y',  'er-n',  yes); }
+  else                { S.hcuDoc = yes; setToggle('hcu-y', 'hcu-n', yes); }
+  const both = S.erDoc && S.hcuDoc;
+  document.getElementById('conc-row').classList.toggle('hidden', !both);
+  // 両方「いる」になったとき兼任を未選択にリセット
+  if (both) {
+    S.concurrent = null;
+    document.getElementById('conc-y').classList.remove('active');
+    document.getElementById('conc-n').classList.remove('active');
+  } else {
+    S.concurrent = null;
+  }
+  updateStartBtn();
+}
+
+function updateStartBtn() {
+  const needsConcurrent = S.erDoc && S.hcuDoc && S.concurrent === null;
+  const btn = document.getElementById('btn-start');
+  btn.disabled = needsConcurrent;
+  btn.style.opacity = needsConcurrent ? '0.45' : '';
+  btn.style.cursor  = needsConcurrent ? 'not-allowed' : '';
+}
+
+function setConcurrent(yes) {
+  S.concurrent = yes;
+  document.getElementById('conc-y').classList.toggle('active',  yes);
+  document.getElementById('conc-n').classList.toggle('active', !yes);
+  updateStartBtn();
+}
+
+function setToggle(yId, nId, yes) {
+  document.getElementById(yId).className = yes ? 'active yes' : '';
+  document.getElementById(nId).className = yes ? '' : 'active no';
+}
+
+/* ─────────────── VALIDITY ─────────────── */
+function setValidity(yes) {
+  S.valid = yes;
+  document.getElementById('v-y').className = yes ? 'active yes' : '';
+  document.getElementById('v-n').className = yes ? '' : 'active no';
+  document.getElementById('excl-block').classList.toggle('hidden', yes);
+}
+
+/* ─────────────── TEST MODE ─────────────── */
+function setTestMode(on) {
+  lss('testMode', String(on));
+  applyTestMode(on);
+}
+function applyTestMode(on) {
+  document.getElementById('test-banner').classList.toggle('hidden', !on);
+  document.getElementById('tm-on').classList.toggle('active', on);
+  document.getElementById('tm-off').classList.toggle('active', !on);
+}
+function isTestMode() { return ls('testMode') === 'true'; }
+
+/* ─────────────── NOW TIME ─────────────── */
+function setNow(id) {
+  const n = new Date();
+  document.getElementById(id).value = `${p2(n.getHours())}:${p2(n.getMinutes())}`;
+}
+
+/* ─────────────── MEMBERS ─────────────── */
+function getTeamMembers() { return lsg(`members_${S.team}`); }
+
+function renderMembers() {
+  const members = getTeamMembers();
+  const el = document.getElementById('members-list');
+  if (!members.length) {
+    el.innerHTML = `<div class="card"><p class="empty-note">メンバーが未登録です。<br>設定からメンバーを追加してください。</p></div>`;
+    return;
+  }
+  el.innerHTML = members.map((m, i) => {
+    const name = m.name || m;
+    const role = m.role || '';
+    mStatus[i] = '参加';
+    return `
+    <div class="member-card" id="mc-${i}">
+      <div class="member-header">
+        ${name}
+        ${role ? `<span class="role-badge role-${role}">${role}</span>` : ''}
+      </div>
+      <div class="member-body">
+        <div class="status-row">
+          <button class="status-btn s-参加" onclick="setStatus(${i},'参加',this)">参加</button>
+          <button class="status-btn"        onclick="setStatus(${i},'途中退席',this)">途中退席</button>
+          <button class="status-btn"        onclick="setStatus(${i},'不参加',this)">不参加</button>
+          <button class="status-btn"        onclick="setStatus(${i},'休日',this)">休日</button>
+          <button class="status-btn"        onclick="setStatus(${i},'大和病院',this)">大和病院</button>
+        </div>
+        <!-- 途中退席: 退席イベントリスト -->
+        <div class="reason-block hidden" id="partial-block-${i}">
+          <div id="dep-events-${i}"></div>
+          <button class="add-dep-btn" onclick="addDeparture(${i})">
+            ＋ 退席を追加
+          </button>
+        </div>
+        <!-- 不参加: 理由 → 復帰時刻 → 退席を追加 -->
+        <div class="reason-block hidden" id="absence-block-${i}">
+          <div class="abs-event">
+            <div>
+              <label>不参加の理由</label>
+              <select id="abs-rsn-${i}" onchange="onAbsReasonChange(${i})">
+                <option value="">選択してください</option>
+                ${REASONS.map(r => `<option value="${r}">${r}</option>`).join('')}
+              </select>
+            </div>
+            <div id="abs-other-${i}" class="hidden">
+              <label>その他の理由</label>
+              <input type="text" id="abs-other-txt-${i}" placeholder="内容を入力" />
+            </div>
+            <div class="abs-return-row">
+              <label>復帰時刻（途中で復帰した場合のみ）</label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="time" id="abs-ret-${i}" style="flex:1" />
+                <button class="now-btn" onclick="setNow('abs-ret-${i}')">現在時刻</button>
+              </div>
+            </div>
+          </div>
+          <div id="dep-events-abs-${i}"></div>
+          <button class="add-dep-btn" onclick="addDeparture(${i})">
+            ＋ 退席を追加
+          </button>
+        </div>
+        <!-- 補足コメント（途中退席・不参加で共有） -->
+        <div class="hidden" id="cmt-block-${i}" style="margin-top:10px">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--subtle);margin-bottom:4px">補足コメント（任意）</label>
+          <textarea id="cmt-${i}" placeholder="詳細があれば入力"></textarea>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setStatus(i, status, btn) {
+  mStatus[i] = status;
+  const card = document.getElementById(`mc-${i}`);
+  card.querySelectorAll('.status-btn').forEach(b => b.className = 'status-btn');
+  btn.className = `status-btn s-${status}`;
+  const isPartial = status === '途中退席';
+  const isAbsent  = status === '不参加';
+  // partial-block は途中退席のみ、absence-block は不参加のみ
+  document.getElementById(`partial-block-${i}`).classList.toggle('hidden', !isPartial);
+  document.getElementById(`absence-block-${i}`).classList.toggle('hidden', !isAbsent);
+  document.getElementById(`cmt-block-${i}`).classList.toggle('hidden', !isPartial && !isAbsent);
+  // ステータス切替時は退席リストをリセット
+  mDepartures[i] = [];
+  renderDepartures(i);
+  // 途中退席: 退席を1件自動追加
+  if (isPartial) addDeparture(i);
+  // 不参加: 理由フォームをリセット
+  if (isAbsent) {
+    const rsnEl = document.getElementById(`abs-rsn-${i}`);
+    if (rsnEl) rsnEl.value = '';
+    document.getElementById(`abs-other-${i}`)?.classList.add('hidden');
+  }
+}
+
+function onAbsReasonChange(i) {
+  const val = document.getElementById(`abs-rsn-${i}`)?.value;
+  document.getElementById(`abs-other-${i}`)?.classList.toggle('hidden', val !== 'その他');
+}
+
+/* ── 退席イベントリストの描画 ── */
+function renderDepartures(i) {
+  const id = mStatus[i] === '不参加' ? `dep-events-abs-${i}` : `dep-events-${i}`;
+  const container = document.getElementById(id);
+  if (!container) return;
+  const deps = mDepartures[i] || [];
+  container.innerHTML = deps.map((_, j) => depEventHTML(i, j)).join('');
+}
+
+function depEventHTML(i, j) {
+  const num = j + 1;
+  const canDelete = j > 0;
+  return `
+  <div class="dep-event" id="dep-event-${i}-${j}">
+    <div class="dep-event-header">
+      <span class="dep-event-label">退席 ${num}</span>
+      ${canDelete ? `<button class="dep-event-del" onclick="removeDeparture(${i},${j})">✕ 削除</button>` : ''}
+    </div>
+    <div>
+      <label>退席時刻</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="time" id="dep-${i}-${j}" style="flex:1" />
+        <button class="now-btn" onclick="setNow('dep-${i}-${j}')">現在時刻</button>
+      </div>
+    </div>
+    <div>
+      <label>理由</label>
+      <select id="rsn-${i}-${j}" onchange="onDepReasonChange(${i},${j})">
+        <option value="">選択してください</option>
+        ${REASONS.map(r => `<option value="${r}">${r}</option>`).join('')}
+      </select>
+    </div>
+    <div id="dep-cmt-other-${i}-${j}" class="hidden">
+      <label>その他の理由</label>
+      <input type="text" id="dep-cmt-${i}-${j}" placeholder="内容を入力" />
+    </div>
+    <div class="dep-return-row">
+      <label>復帰時刻（復帰した場合のみ）</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="time" id="ret-${i}-${j}" style="flex:1" placeholder="空白 = 復帰なし" />
+        <button class="now-btn" onclick="setNow('ret-${i}-${j}')">現在時刻</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function addDeparture(i) {
+  if (!mDepartures[i]) mDepartures[i] = [];
+  mDepartures[i].push({});
+  renderDepartures(i);
+}
+
+function removeDeparture(i, j) {
+  mDepartures[i].splice(j, 1);
+  renderDepartures(i);
+}
+
+function onDepReasonChange(i, j) {
+  const val = document.getElementById(`rsn-${i}-${j}`)?.value;
+  document.getElementById(`dep-cmt-other-${i}-${j}`)?.classList.toggle('hidden', val !== 'その他');
+}
+
+
+/* ─────────────── MEMBER SYNC ─────────────── */
+async function syncMembersFromGas(url, showToast) {
+  try {
+    if (showToast) toast('同期中…');
+    const res  = await fetch(`${url}?action=getMembers`);
+    const json = await res.json();
+    if (json.status === 'ok') {
+      if (Array.isArray(json.A)) lss('members_A', json.A);
+      if (Array.isArray(json.B)) lss('members_B', json.B);
+      if (showToast) {
+        toast('メンバーを同期しました ✓');
+        renderSettings();
+      }
+    }
+  } catch (e) {
+    if (showToast) toast('同期失敗: ' + e.message);
+  }
+}
+
+async function pushMembersToGas(team) {
+  const url = ls('gasUrl');
+  if (!url) return;
+  const members = lsg(`members_${team}`);
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'saveMembers', team, members }),
+    });
+  } catch (e) {
+    // silent — localStorage already updated; GAS sync is best-effort
+  }
+}
+
+/* ─────────────── SETTINGS ─────────────── */
+function renderSettings() {
+  document.getElementById('settings-body').innerHTML = ['A', 'B'].map(team => {
+    const members = lsg(`members_${team}`);
+    return `
+    <div class="card">
+      <div class="card-title">${team}チーム メンバー</div>
+      <div id="mlist-${team}">
+        ${members.length
+          ? members.map((m, i) => {
+              const name = m.name || m;
+              const role = m.role || '';
+              return `
+              <div class="member-item">
+                <span class="member-info">
+                  ${name}
+                  ${role ? `<span class="role-badge role-${role}">${role}</span>` : ''}
+                </span>
+                <button class="del-btn" onclick="delMember('${team}',${i})">×</button>
+              </div>`;
+            }).join('')
+          : '<p class="empty-note">メンバーなし</p>'}
+      </div>
+      <div class="add-row">
+        <input  type="text" id="new-name-${team}" placeholder="名前" />
+        <select id="new-role-${team}">
+          ${ROLES.map(r => `<option value="${r}">${r}</option>`).join('')}
+        </select>
+        <button onclick="addMember('${team}')">追加</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  const on = ls('testMode') === 'true';
+  document.getElementById('tm-on').classList.toggle('active', on);
+  document.getElementById('tm-off').classList.toggle('active', !on);
+}
+
+function addMember(team) {
+  const nameInp = document.getElementById(`new-name-${team}`);
+  const roleInp = document.getElementById(`new-role-${team}`);
+  const name = nameInp.value.trim();
+  const role = roleInp.value;
+  if (!name) { toast('名前を入力してください'); return; }
+  const members = lsg(`members_${team}`);
+  if (members.some(m => (m.name || m) === name)) { toast('同じ名前が既に登録されています'); return; }
+  members.push({ name, role });
+  lss(`members_${team}`, members);
+  pushMembersToGas(team);
+  nameInp.value = '';
+  renderSettings();
+}
+
+function delMember(team, idx) {
+  const members = lsg(`members_${team}`);
+  members.splice(idx, 1);
+  lss(`members_${team}`, members);
+  pushMembersToGas(team);
+  renderSettings();
+}
+
+function saveGasUrl() {
+  const url = document.getElementById('inp-gasurl').value.trim();
+  lss('gasUrl', url);
+  toast('URLを保存しました ✓');
+  if (url) syncMembersFromGas(url, false);
+}
+
+function manualSync() {
+  const url = ls('gasUrl');
+  if (!url) { toast('先にGAS URLを保存してください'); return; }
+  syncMembersFromGas(url, true);
+}
+
+function copyShareLink() {
+  const url = ls('gasUrl');
+  if (!url) { toast('先にGAS URLを保存してください'); return; }
+  const shareUrl = `${location.origin}${location.pathname}?gas=${encodeURIComponent(url)}`;
+  navigator.clipboard.writeText(shareUrl)
+    .then(() => toast('共有リンクをコピーしました ✓'))
+    .catch(() => {
+      // クリップボードAPIが使えない場合はpromptで表示
+      prompt('このURLをコピーしてください', shareUrl);
+    });
+}
+
+/* ─────────────── CONCURRENT VALUE ─────────────── */
+function concurrentVal() {
+  if (S.erDoc && S.hcuDoc) {
+    if (S.concurrent === null) return '未選択';
+    return S.concurrent ? '兼任' : '独立';
+  }
+  return '該当なし';
+}
+
+/* ─────────────── BUILD PAYLOAD ─────────────── */
+function buildNoRoundPayload() {
+  return {
+    date: document.getElementById('inp-date').value,
+    team: S.team, roundType: S.round,
+    erDoctor: S.erDoc ? 'いる' : 'いない',
+    hcuDoctor: S.hcuDoc ? 'いる' : 'いない',
+    concurrent: concurrentVal(),
+    held: false, startTime: '', endTime: '',
+    participantCount: 0, partialCount: 0, absentCount: 0,
+    members: [], valid: true, exclusionReason: '',
+  };
+}
+
+function buildRecordPayload() {
+  const members = getTeamMembers();
+  const memberData = members.map((m, i) => {
+    const name    = m.name || m;
+    const role    = m.role || '';
+    const status  = mStatus[i] || '参加';
+    const comment = document.getElementById(`cmt-${i}`)?.value || '';
+    // 途中退席・不参加：退席イベントリストを収集
+    let departures = [];
+    if (status === '途中退席' || status === '不参加') {
+      const deps = mDepartures[i] || [];
+      departures = deps.map((_, j) => ({
+        departureTime: document.getElementById(`dep-${i}-${j}`)?.value || '',
+        reason:        document.getElementById(`rsn-${i}-${j}`)?.value || '',
+        reasonOther:   document.getElementById(`dep-cmt-${i}-${j}`)?.value || '',
+        returnTime:    document.getElementById(`ret-${i}-${j}`)?.value || '',
+      })).filter(d => d.departureTime || d.reason); // 空エントリは除外
+    }
+    // 不参加：理由 + 復帰時刻を収集
+    let absenceReason = '', absenceReasonOther = '', absenceReturnTime = '';
+    if (status === '不参加') {
+      absenceReason      = document.getElementById(`abs-rsn-${i}`)?.value || '';
+      absenceReasonOther = document.getElementById(`abs-other-txt-${i}`)?.value || '';
+      absenceReturnTime  = document.getElementById(`abs-ret-${i}`)?.value || '';
+    }
+    return { name, role, status, departures, absenceReason, absenceReasonOther, absenceReturnTime, comment };
+  });
+  return {
+    date: document.getElementById('inp-date').value,
+    team: S.team, roundType: S.round,
+    erDoctor: S.erDoc ? 'いる' : 'いない',
+    hcuDoctor: S.hcuDoc ? 'いる' : 'いない',
+    concurrent: concurrentVal(),
+    held: true,
+    startTime: S.startTime || '', endTime: document.getElementById('inp-end').value || '',
+    participantCount: memberData.filter(m => m.status === '参加').length,
+    partialCount:     memberData.filter(m => m.status === '途中退席').length,
+    absentCount:      memberData.filter(m => m.status === '不参加').length,
+    members: memberData,
+    valid: S.valid,
+    exclusionReason: S.valid ? '' : (document.getElementById('excl-reason')?.value || ''),
+  };
+}
+
+/* ─────────────── SUBMIT ─────────────── */
+async function submitNoRound() {
+  const payload = buildNoRoundPayload();
+  if (!payload.date) { toast('日付を入力してください'); return; }
+  const label = `${payload.date} ${payload.team}チーム ${payload.roundType}ラウンド`;
+  if (!confirm(`「${label}」を開催なしで記録します。よろしいですか？`)) return;
+  await send(payload, '開催なしを記録しました ✓');
+}
+
+async function submitRecord() {
+  if (!getTeamMembers().length) { toast('メンバーを登録してください'); return; }
+  await send(buildRecordPayload(), '記録を送信しました ✓');
+}
+
+async function send(payload, successMsg) {
+  if (isTestMode()) { showTestModal(payload); return; }
+  const url = ls('gasUrl');
+  if (!url) { toast('設定でGAS URLを入力してください'); return; }
+  try {
+    toast('送信中…');
+    const res  = await fetch(url, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+    if (json.status === 'ok') {
+      toast(successMsg);
+      setTimeout(() => goScreen('screen-home'), 1600);
+    } else {
+      toast('エラー: ' + (json.message || '不明'));
+    }
+  } catch (e) {
+    toast('送信失敗: ' + e.message);
+  }
+}
+
+/* ─────────────── TEST MODAL ─────────────── */
+function formatPayload(p) {
+  const lines = [];
+  lines.push(`📅 日付         : ${p.date}`);
+  lines.push(`👥 チーム       : ${p.team}チーム`);
+  lines.push(`🕐 種別         : ${p.roundType}ラウンド`);
+  lines.push(`🚨 救急外来専属  : ${p.erDoctor}`);
+  lines.push(`🏥 HCU専属      : ${p.hcuDoctor}`);
+  lines.push(`🔗 兼任フラグ    : ${p.concurrent}`);
+  lines.push(`📋 開催         : ${p.held ? '開催あり' : '開催なし'}`);
+  if (p.held) {
+    lines.push(`⏰ 開始時刻     : ${p.startTime || '未入力'}`);
+    lines.push(`⏰ 終了時刻     : ${p.endTime   || '未入力'}`);
+    lines.push(`✅ 参加         : ${p.participantCount}人`);
+    lines.push(`⚡ 途中退席     : ${p.partialCount}人`);
+    lines.push(`❌ 不参加        : ${p.absentCount}人`);
+    lines.push('');
+    lines.push('── メンバー詳細 ──');
+    p.members.forEach(m => {
+      const roleStr = m.role ? `[${m.role}] ` : '';
+      lines.push(`  ${roleStr}${m.name} : ${m.status}`);
+      if (m.departures?.length) {
+        m.departures.forEach((d, j) => {
+          const ret = d.returnTime ? `復帰 ${d.returnTime}` : '復帰なし';
+          lines.push(`    退席${j+1}: ${d.departureTime || '時刻未入力'} (${d.reason || '理由未選択'}) → ${ret}`);
+        });
+      }
+      if (m.status === '不参加') {
+        const rsn = m.absenceReason === 'その他' && m.absenceReasonOther
+          ? `その他（${m.absenceReasonOther}）` : (m.absenceReason || '理由未選択');
+        const ret = m.absenceReturnTime ? `復帰 ${m.absenceReturnTime}` : '復帰なし';
+        lines.push(`    不参加理由: ${rsn} / ${ret}`);
+      }
+      if (m.comment) lines.push(`    ※ ${m.comment}`);
+    });
+  }
+  lines.push('');
+  lines.push(`📊 分析に含める  : ${p.valid ? '含める' : '含めない'}`);
+  if (!p.valid && p.exclusionReason) lines.push(`   除外理由: ${p.exclusionReason}`);
+  return lines.join('\n');
+}
+
+function showTestModal(payload) {
+  document.getElementById('modal-body').textContent = formatPayload(payload);
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  window.scrollTo(0, 0);
+}
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').classList.add('hidden');
+}
+function closeModalAndReset() {
+  document.getElementById('modal-overlay').classList.add('hidden');
+  goScreen('screen-home');
+  toast('テスト確認完了 ✓');
+}
+
+/* ─────────────── TOAST ─────────────── */
+let _tt;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_tt);
+  _tt = setTimeout(() => el.classList.remove('show'), 2600);
+}
+</script>
+</body>
+</html>
