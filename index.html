@@ -1225,6 +1225,8 @@ function buildRecordPayload() {
 }
 
 /* ─────────────── SUBMIT ─────────────── */
+let _sending = false;
+
 async function submitNoRound() {
   const payload = buildNoRoundPayload();
   if (!payload.date) { toast('日付を入力してください'); return; }
@@ -1239,9 +1241,11 @@ async function submitRecord() {
 }
 
 async function send(payload, successMsg) {
+  if (_sending) { toast('送信中です。しばらくお待ちください'); return; }
   if (isTestMode()) { showTestModal(payload); return; }
   const url = ls('gasUrl');
   if (!url) { toast('設定でGAS URLを入力してください'); return; }
+  _sending = true;
   try {
     toast('送信中…');
     const res  = await fetch(url, {
@@ -1251,12 +1255,14 @@ async function send(payload, successMsg) {
     const json = await res.json();
     if (json.status === 'ok') {
       toast(successMsg);
-      setTimeout(() => goScreen('screen-home'), 1600);
+      setTimeout(() => { _sending = false; goScreen('screen-home'); }, 1600);
     } else {
       toast('エラー: ' + (json.message || '不明'));
+      _sending = false;
     }
   } catch (e) {
     toast('送信失敗: ' + e.message);
+    _sending = false;
   }
 }
 
