@@ -421,6 +421,34 @@
       opacity: .7;
     }
     .del-btn:hover { opacity: 1; }
+    .edit-btn {
+      background: none; border: none;
+      color: var(--a4); font-size: 16px; cursor: pointer; line-height: 1;
+      opacity: .7; padding: 0 4px;
+    }
+    .edit-btn:hover { opacity: 1; }
+    .member-edit-row {
+      flex: 1; display: flex; flex-direction: column; gap: 6px;
+    }
+    .member-edit-row input,
+    .member-edit-row select {
+      font-size: 14px; padding: 7px 10px;
+    }
+    .member-edit-actions {
+      display: flex; gap: 4px; margin-left: 8px; align-items: flex-start;
+    }
+    .save-btn {
+      background: var(--a3); color: var(--white);
+      border: none; border-radius: 6px;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      padding: 6px 10px; font-family: inherit;
+    }
+    .cancel-btn {
+      background: none; border: 1.5px solid var(--border);
+      border-radius: 6px; color: var(--muted);
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      padding: 6px 10px; font-family: inherit;
+    }
     .add-row {
       display: grid; grid-template-columns: 1fr 1fr auto;
       gap: 6px; margin-top: 12px;
@@ -1124,12 +1152,15 @@ function renderSettings() {
               const name = m.name || m;
               const role = m.role || '';
               return `
-              <div class="member-item">
+              <div class="member-item" id="mitem-${team}-${i}">
                 <span class="member-info">
                   ${name}
                   ${role ? `<span class="role-badge role-${role}">${role}</span>` : ''}
                 </span>
-                <button class="del-btn" onclick="delMember('${team}',${i})">×</button>
+                <div style="display:flex;gap:2px;align-items:center">
+                  <button class="edit-btn" onclick="editMember('${team}',${i})">✏</button>
+                  <button class="del-btn"  onclick="delMember('${team}',${i})">×</button>
+                </div>
               </div>`;
             }).join('')
           : '<p class="empty-note">メンバーなし</p>'}
@@ -1170,6 +1201,39 @@ function delMember(team, idx) {
   lss(`members_${team}`, members);
   pushMembersToGas(team);
   renderSettings();
+}
+
+function editMember(team, idx) {
+  const members = lsg(`members_${team}`);
+  const m = members[idx];
+  const name = m.name || m;
+  const role = m.role || '';
+  const el = document.getElementById(`mitem-${team}-${idx}`);
+  el.innerHTML = `
+    <div class="member-edit-row">
+      <input type="text" id="edit-name-${team}-${idx}" value="${name}" />
+      <select id="edit-role-${team}-${idx}">
+        ${ROLES.map(r => `<option value="${r}" ${r === role ? 'selected' : ''}>${r}</option>`).join('')}
+      </select>
+    </div>
+    <div class="member-edit-actions">
+      <button class="save-btn"   onclick="saveMember('${team}',${idx})">✓</button>
+      <button class="cancel-btn" onclick="renderSettings()">✕</button>
+    </div>`;
+}
+
+function saveMember(team, idx) {
+  const name = document.getElementById(`edit-name-${team}-${idx}`)?.value.trim();
+  const role = document.getElementById(`edit-role-${team}-${idx}`)?.value;
+  if (!name) { toast('名前を入力してください'); return; }
+  const members = lsg(`members_${team}`);
+  const duplicate = members.some((m, i) => i !== idx && (m.name || m) === name);
+  if (duplicate) { toast('同じ名前が既に登録されています'); return; }
+  members[idx] = { name, role };
+  lss(`members_${team}`, members);
+  pushMembersToGas(team);
+  renderSettings();
+  toast('更新しました ✓');
 }
 
 function saveGasUrl() {
