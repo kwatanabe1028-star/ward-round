@@ -370,15 +370,15 @@
     }
     .dep-return-row label { color: var(--a3) !important; }
     .add-dep-btn {
-      width: 100%; margin-top: 10px; padding: 9px;
-      background: none;
-      border: 1.5px dashed color-mix(in srgb, var(--warn) 40%, var(--white));
+      width: 100%; margin-top: 12px; padding: 11px;
+      background: color-mix(in srgb, var(--warn) 10%, var(--white));
+      border: 1.5px solid color-mix(in srgb, var(--warn) 55%, var(--white));
       border-radius: 8px; color: var(--warn);
       font-size: 13px; font-weight: 700; cursor: pointer;
       font-family: inherit; letter-spacing: 0.03em;
     }
-    .add-dep-btn:hover {
-      background: color-mix(in srgb, var(--warn) 6%, var(--white));
+    .add-dep-btn:active {
+      background: color-mix(in srgb, var(--warn) 20%, var(--white));
     }
 
     /* ── Absence event block ── */
@@ -1051,7 +1051,7 @@ function renderMembers() {
         <div class="reason-block hidden" id="partial-block-${i}">
           <div id="dep-events-${i}"></div>
           <button class="add-dep-btn" onclick="addDeparture(${i})">
-            ＋ 退席を追加
+            ＋ 退席をもう1回追加（複数回退席した場合）
           </button>
         </div>
         <!-- 不参加: 理由 → 復帰時刻 → 退席を追加 -->
